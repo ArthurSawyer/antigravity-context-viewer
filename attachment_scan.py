@@ -25,6 +25,51 @@ class Counter:
 def local(tag):
     return tag.rsplit('}', 1)[-1]
 
+def translate_formula(formula, origin_ref, target_ref):
+    if not origin_ref or not target_ref or origin_ref == target_ref:
+        return formula
+    try:
+        from openpyxl.formula.translate import Translator
+        return Translator('=' + formula, origin=origin_ref).translate_formula(target_ref).lstrip('=')
+    except Exception:
+        pass
+
+    def col2num(col):
+        num = 0
+        for c in col.upper():
+            num = num * 26 + (ord(c) - 64)
+        return num
+
+    def num2col(num):
+        s = ''
+        while num > 0:
+            num, r = divmod(num - 1, 26)
+            s = chr(65 + r) + s
+        return s
+
+    m_o = re.match(r'^([A-Za-z]+)([0-9]+)$', origin_ref)
+    m_t = re.match(r'^([A-Za-z]+)([0-9]+)$', target_ref)
+    if not m_o or not m_t:
+        return formula
+
+    col_delta = col2num(m_t.group(1)) - col2num(m_o.group(1))
+    row_delta = int(m_t.group(2)) - int(m_o.group(2))
+
+    def repl(m):
+        c_abs, col_str, r_abs, row_str = m.groups()
+        c_num = col2num(col_str)
+        r_num = int(row_str)
+        if not c_abs:
+            c_num += col_delta
+        if not r_abs:
+            r_num += row_delta
+        if c_num < 1 or r_num < 1:
+            return m.group(0)
+        return f"{c_abs}{num2col(c_num)}{r_abs}{r_num}"
+
+    pattern = re.compile(r'(?<![A-Za-z0-9_])(\$?)([A-Za-z]+)(\$?)([0-9]+)\b')
+    return pattern.sub(repl, formula)
+
 def xlsx_scan(path, counter, result):
     with zipfile.ZipFile(path) as z:
         infos = z.infolist()
@@ -65,9 +110,8 @@ def xlsx_scan(path, counter, result):
                                 shared_formulas[shared_id] = (e.attrib.get('r'), formula)
                             else:
                                 try:
-                                    from openpyxl.formula.translate import Translator
                                     origin, original = shared_formulas[shared_id]
-                                    formula = Translator('=' + original, origin=origin).translate_formula(e.attrib['r']).lstrip('=')
+                                    formula = translate_formula(original, origin, e.attrib['r'])
                                 except Exception:
                                     warning = '部分共享公式无法展开，仅计入已保存值'
                                     if warning not in result['unknownParts']: result['unknownParts'].append(warning)

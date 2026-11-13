@@ -1,5 +1,7 @@
 'use strict';
 const fs = require('fs');
+const os = require('os');
+const path = require('path');
 const http = require('http');
 const https = require('https');
 function request(url, body, token) {
@@ -11,8 +13,18 @@ function request(url, body, token) {
     req.setTimeout(20000, () => req.destroy(new Error('Local API timeout'))); req.on('error', reject); req.end(body ? JSON.stringify(body) : undefined);
   });
 }
+function getDevToolsPort() {
+  const appData = process.env.APPDATA || (process.platform === 'darwin'
+    ? path.join(os.homedir(), 'Library', 'Application Support')
+    : path.join(os.homedir(), '.config'));
+  const portFile = path.join(appData, 'Antigravity', 'DevToolsActivePort');
+  if (!fs.existsSync(portFile)) throw new Error('DevToolsActivePort not found');
+  const port = Number(fs.readFileSync(portFile, 'utf8').split(/\r?\n/)[0]);
+  if (!Number.isFinite(port) || port <= 0) throw new Error('Invalid DevToolsActivePort');
+  return port;
+}
 async function connect() {
-  const port = Number(fs.readFileSync(process.env.APPDATA + '/Antigravity/DevToolsActivePort', 'utf8').split(/\r?\n/)[0]);
+  const port = getDevToolsPort();
   const pages = JSON.parse(await request(`http://127.0.0.1:${port}/json/list`));
   const page = pages.find(item => item.type === 'page' && /^https:\/\/127\.0\.0\.1:\d+\//.test(item.url));
   if (!page) throw new Error('Antigravity window not found');

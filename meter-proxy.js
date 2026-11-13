@@ -18,7 +18,9 @@ function getProxyCandidatePaths(customPath = null) {
   }
   const localBase = process.env.LOCALAPPDATA || (process.platform === 'win32'
     ? path.join(os.homedir(), 'AppData', 'Local')
-    : (process.env.XDG_CONFIG_HOME || path.join(os.homedir(), '.config')));
+    : (process.platform === 'darwin'
+      ? path.join(os.homedir(), 'Library', 'Application Support')
+      : (process.env.XDG_CONFIG_HOME || path.join(os.homedir(), '.config'))));
 
   candidates.push(
     path.join(localBase, 'AntigravityContextMeter', 'proxy.json'),

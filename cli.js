@@ -188,8 +188,35 @@ async function cmdCheck(customPath) {
   console.log('✅ 环境预检通过！');
 }
 
+function printHelp() {
+  console.log(`用法:
+  node cli.js install [--path <app.asar>]   一键持久化安装并热注入当前运行窗口
+  node cli.js live                          免改盘 CDP 热挂载到当前运行窗口
+  node cli.js status                        查看安装状态与当前对话实时上下文用量
+  node cli.js check                         执行前置环境健康检查
+  node cli.js restore                       一键无损卸载并恢复备份
+  node cli.js unlock-status [--path <bin>]  检查 Antigravity 后端上下文加长状态
+  node cli.js unlock [--path <bin>]         执行上下文加长解锁（解除 256K 限制）
+  node cli.js unlock-restore [--path <bin>] 恢复官方原版二进制
+  node cli.js modules                       查看统一模块总览状态
+  node cli.js chinese:enable/disable        切换客户端界面汉化模块
+  node cli.js proxy:enable/disable          切换免 TUN 本地代理模块
+  node cli.js proxy:set <url>               设置本地代理地址
+  node cli.js proxy:test [url]              分层检测代理健康与公网连通性`);
+}
+
 async function main() {
   const args = process.argv.slice(2);
+  if (args.includes('--help') || args.includes('-h') || args.includes('help')) {
+    printHelp();
+    return;
+  }
+  if (args.includes('--version') || args.includes('-v') || args.includes('version')) {
+    const meterVersion = JSON.parse(fs.readFileSync(path.join(__dirname, 'package.json'), 'utf8')).version;
+    console.log(`v${meterVersion}`);
+    return;
+  }
+
   const cmd = (args.find(a => !a.startsWith('-')) || 'install').toLowerCase();
   const pathIdx = args.indexOf('--path');
   const customPath = pathIdx >= 0 ? args[pathIdx + 1] : null;
@@ -344,15 +371,7 @@ async function main() {
   } else if (cmd === 'check') {
     await cmdCheck(customPath);
   } else {
-    console.log(`用法:
-  node cli.js install [--path <app.asar>]   一键持久化安装并热注入当前运行窗口
-  node cli.js live                          免改盘 CDP 热挂载到当前运行窗口
-  node cli.js status                        查看安装状态与当前对话实时上下文用量
-  node cli.js check                         执行前置环境健康检查
-  node cli.js restore                       一键无损卸载并恢复备份
-  node cli.js unlock-status [--path <bin>]  检查 Antigravity 后端上下文加长状态
-  node cli.js unlock [--path <bin>]         执行上下文加长解锁（解除 256K 限制）
-  node cli.js unlock-restore [--path <bin>] 恢复官方原版二进制`);
+    printHelp();
   }
 }
 

@@ -155,7 +155,9 @@ async function runIsolatedVerification() {
     'install.bat': '@echo off\r\necho mock installed\r\n'
   });
   const testZipSha = sha256(testZipBuf);
-  const testZipName = 'antigravity-context-viewer_0.8.3_windows_amd64.zip';
+  const osName = process.platform === 'win32' ? 'windows' : (process.platform === 'darwin' ? 'darwin' : 'linux');
+  const archName = (process.arch === 'x64' || process.arch === 'amd64') ? 'amd64' : 'arm64';
+  const testZipName = `antigravity-context-viewer_0.8.3_${osName}_${archName}.zip`;
   const testChecksums = `${testZipSha}  ${testZipName}\n`;
 
   const localTestRelease = [

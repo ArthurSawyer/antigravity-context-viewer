@@ -649,12 +649,10 @@ async function launchCliSession(options = {}, ownerHwnd = 0) {
 
   const cliArgs = ['--model', model, ...extraArgs];
   const env = buildCliProxyEnv(process.env);
-  // 恢复 Windows 交互式 CLI 子进程环境的原生彩虹渐变 Logo 与颜色能力（隔离宿主环境的 NO_COLOR/dumb）
-  if (process.platform === 'win32') {
-    delete env.NO_COLOR;
-    env.TERM = 'xterm-256color';
-    env.COLORTERM = 'truecolor';
-  }
+  // 恢复交互式 CLI 子进程环境的原生彩虹渐变 Logo 与颜色能力（隔离宿主环境的 NO_COLOR/dumb）
+  delete env.NO_COLOR;
+  env.TERM = 'xterm-256color';
+  env.COLORTERM = 'truecolor';
 
   if (options.dryRun === true) {
     return {

@@ -732,8 +732,8 @@ async function analyzeBinaryAsync(filePath, options = {}) {
     };
   }
 
-  // 跨平台安全策略拦截：仅支持 Windows (x86-64)
-  if (process.platform !== 'win32') {
+  // 宿主默认路径安全策略拦截：仅支持 Windows (x86-64)
+  if (!filePath && process.platform !== 'win32') {
     return {
       status: 'unsupported',
       targetPath: target,
@@ -1013,8 +1013,8 @@ function analyzeBinary(filePath, options = {}) {
  * 执行上下文加长解锁 (Apply)
  */
 function applyUnlock(options = {}) {
-  // 跨平台安全策略拦截：仅支持 Windows (x86-64)
-  if (process.platform !== 'win32') {
+  // 宿主默认路径安全策略拦截：仅支持 Windows (x86-64)
+  if (!options.targetPath && process.platform !== 'win32') {
     return {
       ok: false,
       code: 'PLATFORM_UNSUPPORTED',
@@ -1182,8 +1182,8 @@ function applyUnlock(options = {}) {
  * 恢复原版二进制 (Restore)
  */
 function restoreUnlock(options = {}) {
-  // 跨平台安全策略拦截：仅支持 Windows (x86-64)
-  if (process.platform !== 'win32') {
+  // 宿主默认路径安全策略拦截：仅支持 Windows (x86-64)
+  if (!options.targetPath && process.platform !== 'win32') {
     return {
       ok: false,
       code: 'PLATFORM_UNSUPPORTED',

@@ -126,14 +126,32 @@ function packagePlatform(plat, version) {
 
     if (fs.existsSync(zipPath)) fs.unlinkSync(zipPath);
 
-    // 调用 PowerShell 原生 .NET ZipFile 进行高兼容无损压缩
-    const psScript = `
-      [System.Reflection.Assembly]::LoadWithPartialName('System.IO.Compression.FileSystem') | Out-Null
-      [System.IO.Compression.ZipFile]::CreateFromDirectory('${stagingDir.replace(/'/g, "''")}', '${zipPath.replace(/'/g, "''")}', [System.IO.Compression.CompressionLevel]::Optimal, $false)
-    `;
-    const res = spawnSync('powershell.exe', ['-NoProfile', '-Command', psScript], { stdio: 'pipe' });
-    if (res.status !== 0 || !fs.existsSync(zipPath)) {
-      throw new Error(`打包 ${zipFilename} 失败: ${res.stderr?.toString('utf8') || '未知错误'}`);
+    let packaged = false;
+    if (process.platform === 'win32') {
+      const psScript = `
+        [System.Reflection.Assembly]::LoadWithPartialName('System.IO.Compression.FileSystem') | Out-Null
+        [System.IO.Compression.ZipFile]::CreateFromDirectory('${stagingDir.replace(/'/g, "''")}', '${zipPath.replace(/'/g, "''")}', [System.IO.Compression.CompressionLevel]::Optimal, $false)
+      `;
+      const res = spawnSync('powershell.exe', ['-NoProfile', '-Command', psScript], { stdio: 'pipe' });
+      if (res.status === 0 && fs.existsSync(zipPath)) {
+        packaged = true;
+      }
+    }
+    if (!packaged) {
+      // 跨平台方案：优先调用系统 zip 命令，次选 Python 原生 zipfile
+      const zipRes = spawnSync('zip', ['-rq', zipPath, '.'], { cwd: stagingDir, stdio: 'pipe' });
+      if (zipRes.status === 0 && fs.existsSync(zipPath)) {
+        packaged = true;
+      } else {
+        const pyScript = `import zipfile, os, sys; z=zipfile.ZipFile(sys.argv[1],'w',zipfile.ZIP_DEFLATED); [z.write(os.path.join(r,f),os.path.relpath(os.path.join(r,f),sys.argv[2])) for r,_,fs in os.walk(sys.argv[2]) for f in fs]; z.close()`;
+        const pyRes = spawnSync('python3', ['-c', pyScript, zipPath, stagingDir], { stdio: 'pipe' });
+        if (pyRes.status === 0 && fs.existsSync(zipPath)) {
+          packaged = true;
+        }
+      }
+    }
+    if (!packaged || !fs.existsSync(zipPath)) {
+      throw new Error(`打包 ${zipFilename} 失败: 未能完成跨平台 ZIP 打包`);
     }
 
     const sz = fs.statSync(zipPath).size;
